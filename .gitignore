@@ -4,3 +4,5 @@ venv
 
 .databricks
 databricks.yml
+
+__pycache__/
