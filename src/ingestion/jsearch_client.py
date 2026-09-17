@@ -1,9 +1,10 @@
 import os
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
-import requests
+
 
 URL = "https://jsearch.p.rapidapi.com/search-v2"
 API_KEY = os.getenv('API_KEY')

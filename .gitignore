@@ -6,3 +6,4 @@ venv
 databricks.yml
 
 __pycache__/
+*.bak
