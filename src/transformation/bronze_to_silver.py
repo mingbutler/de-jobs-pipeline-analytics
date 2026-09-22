@@ -1,6 +1,8 @@
 from databricks.connect import DatabricksSession
 from pyspark.sql import functions as F
 
+from keyword_extractor import add_education_level_column, add_experience_years_column, add_skills_column
+
 spark = DatabricksSession.builder.getOrCreate()
 
 volume_path = "dbfs:/Volumes/workspace/bronze/raw_data/"
@@ -35,6 +37,11 @@ silver_df = jobs_df.select(
 silver_df = silver_df.dropDuplicates(["job_id"])
 # remove rows with no job_id
 silver_df = silver_df.filter(F.col('job_id').isNotNull()).withColumn('_ingested_at', F.current_timestamp())
+
+# add skills, experience years, and education keyword column
+silver_df = add_skills_column(silver_df, text_col="job_description")
+silver_df = add_experience_years_column(silver_df, text_col="job_description")
+silver_df = add_education_level_column(silver_df, text_col="job_description")
 
 # write to delta table
 silver_df.write.format('delta').mode('overwrite').saveAsTable('workspace.silver.job_postings')
