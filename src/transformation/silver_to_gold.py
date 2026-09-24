@@ -29,3 +29,11 @@ gold_location_salary = locations.agg(
     F.round(F.avg('min_salary'), 2).alias('avg_min_salary'),
     F.round(F.avg('max_salary'), 2).alias('avg_max_salary')
 ).orderBy(F.desc('posting_count'))
+
+# write to gold schema as separate tables
+gold_dfs = [('skill_demand', gold_skill_demand),
+            ('experience_requirements', gold_experience),
+            ('location_salary_trend', gold_location_salary)]
+
+for name, df in gold_dfs:
+    df.write.format("delta").mode("overwrite").saveAsTable(f"workspace.gold.{name}")
