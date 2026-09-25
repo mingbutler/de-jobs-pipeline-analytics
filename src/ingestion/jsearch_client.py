@@ -1,15 +1,16 @@
-import os
-from dotenv import load_dotenv
 import requests
+from databricks.sdk import WorkspaceClient
 
-load_dotenv()
-
-
+w = WorkspaceClient()
+dbutils = w.dbutils
 
 URL = "https://jsearch.p.rapidapi.com/search-v2"
-API_KEY = os.getenv('API_KEY')
+API_KEY = dbutils.secrets.get(scope="rapidapi", key="jsearch_key")
+if not API_KEY:
+    raise RuntimeError("Missing API_KEY for JSearch client.")
+
 def fetch_jobs():
-    querystring = {"query": "data engineer jobs"}
+    querystring = {"country": "us", "date_posted": "today", "query": "data engineer jobs"}
 
     headers = {
         "x-rapidapi-key": API_KEY,
