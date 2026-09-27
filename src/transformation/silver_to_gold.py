@@ -3,11 +3,12 @@ from pyspark.sql import functions as F
 
 spark = DatabricksSession.builder.getOrCreate()
 
-silver_df = spark.table('workspace.silver.job_postings')
+TABLE_NAME = "workspace.silver.job_postings"
+silver_df = spark.table(TABLE_NAME)
+print(f"Successfully read from table: {TABLE_NAME}")
 
 # gold layer skills demand
 skills_df = silver_df.withColumn('skill', F.explode(F.col('skills')))
-
 gold_skill_demand = skills_df.groupBy('skill').agg(F.count('*').alias('posting_count')).orderBy(F.desc('posting_count'))
 
 # gold layer experience requirements
@@ -37,3 +38,5 @@ gold_dfs = [('skill_demand', gold_skill_demand),
 
 for name, df in gold_dfs:
     df.write.format("delta").mode("overwrite").saveAsTable(f"workspace.gold.{name}")
+    
+print("Successfully updated skills_demand, experience_requirements, and location_salary_trend tables")

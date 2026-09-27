@@ -11,7 +11,7 @@ TABLE_NAME = "workspace.silver.job_postings"
 VOLUME_PATH = "dbfs:/Volumes/workspace/bronze/raw_data/"
 
 raw_df = spark.read.json(VOLUME_PATH, multiLine=True)
-
+print(f"Read raw volume data from: {VOLUME_PATH}")
 # explode nested data
 jobs_df = raw_df.select(F.explode('data.jobs').alias('job'))
 
@@ -39,11 +39,13 @@ silver_df = jobs_df.select(
 silver_df = silver_df.dropDuplicates(["job_id"])
 # remove rows with no job_id
 silver_df = silver_df.filter(F.col('job_id').isNotNull()).withColumn('_ingested_at', F.current_timestamp())
+print("Drop duplicate and null job ids from silver df")
 
 # add skills, experience years, and education keyword column
 silver_df = add_skills_column(silver_df, text_col="job_description")
 silver_df = add_experience_years_column(silver_df, text_col="job_description")
 silver_df = add_education_level_column(silver_df, text_col="job_description")
+print("Add skills, experience, and education columns")
 
 # write to delta table
 # merge new data logic
@@ -57,9 +59,11 @@ if spark.catalog.tableExists(TABLE_NAME):
     )
 else:
     silver_df.write.format('delta').saveAsTable('workspace.silver.job_postings')
-    
+print(f"Successfully wrote transformed data to silver table: {TABLE_NAME}")
+
 # pull insert/update counts from merge metrics
 metrics = spark.sql(f"DESCRIBE HISTORY {TABLE_NAME} LIMIT 1").collect()[0]['operationMetrics']
 rows_changed = int(metrics.get('numTargetRowsInserted', 0)) + int(metrics.get('numTargetRowsUpdated', 0))
+print(f"Metrics:\n{metrics}\nTotal silver rows changed: {rows_changed}")
 
 dbutils.jobs.taskValues.set(key="silver_rows_changed", value="true" if rows_changed > 0 else "false")
