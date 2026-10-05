@@ -16,19 +16,34 @@ experience_range = silver_df.withColumn('experience_range',
     F.when(F.col('extracted_min_years_experience') <= 2.0, '0-2')
      .when(F.col('extracted_min_years_experience') <= 5.0, '3-5')
      .when(F.col('extracted_min_years_experience') <= 8.0, '5-8')
-     .when(F.col('extracted_min_years_experience') >= 9.0, '10+')
+     .when(F.col('extracted_min_years_experience') > 8.0, '8+')
      .otherwise('Not Found')
 )
 
 gold_experience = experience_range.groupBy('experience_range').count()
 
 # postings by location and salary
-locations = silver_df.dropna(subset=['state', 'city']).groupBy('state', 'city')
+# multiplier to convert each pay period to a yearly figure
+annual_multiplier = (
+    F.when(F.upper(F.col("salary_period")) == "YEAR", 1)
+     .when(F.upper(F.col("salary_period")) == "MONTH", 12)
+     .when(F.upper(F.col("salary_period")) == "WEEK", 52)
+     .when(F.upper(F.col("salary_period")) == "DAY", 260)
+     .when(F.upper(F.col("salary_period")) == "HOUR", 2080)
+)
+
+silver_df = (
+    silver_df
+    .withColumn("min_salary_annual", F.round(F.col("min_salary") * annual_multiplier, 2))
+    .withColumn("max_salary_annual", F.round(F.col("max_salary") * annual_multiplier, 2))
+)
+
+locations = silver_df.dropna(subset=['state', 'city']).filter(F.col('min_salary_annual').isNotNull() & F.col('max_salary_annual').isNotNull()).groupBy('state', 'city')
 
 gold_location_salary = locations.agg(
     F.count('*').alias('posting_count'),
-    F.round(F.avg('min_salary'), 2).alias('avg_min_salary'),
-    F.round(F.avg('max_salary'), 2).alias('avg_max_salary')
+    F.round(F.avg('min_salary_annual'), 2).alias('avg_min_salary'),
+    F.round(F.avg('max_salary_annual'), 2).alias('avg_max_salary')
 ).orderBy(F.desc('posting_count'))
 
 # write to gold schema as separate tables
