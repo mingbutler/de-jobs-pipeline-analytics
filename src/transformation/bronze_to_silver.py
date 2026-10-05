@@ -6,8 +6,6 @@ from databricks.sdk.runtime import dbutils
 from keyword_extractor import add_education_level_column, add_experience_years_column, add_skills_column
 
 spark = DatabricksSession.builder.getOrCreate()
-# schema evolution 
-spark.conf.set("spark.databricks.delta.schema.automerge.enabled", "true")
 
 TABLE_NAME = "workspace.silver.job_postings"
 VOLUME_PATH = "dbfs:/Volumes/workspace/bronze/raw_data/"
